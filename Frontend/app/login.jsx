@@ -17,7 +17,7 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      const data = await loginUser(email, password);
+      const data = await loginUser(email.trim(), password);
       // Save token and name to AsyncStorage
       await AsyncStorage.setItem('authToken', data.token);
       await AsyncStorage.setItem('userName', data.name);
@@ -25,7 +25,7 @@ export default function LoginScreen() {
       // Navigate to Home
       router.replace('/');
     } catch (error) {
-      Alert.alert('Login Failed', 'Invalid email or password');
+      Alert.alert('Login Failed', error.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }

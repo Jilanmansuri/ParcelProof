@@ -39,7 +39,7 @@ export default function ProofSummaryScreen() {
       );
     } catch (error) {
       // Fallback: If backend fails, show error but don't lose data
-      Alert.alert('Upload Error', 'Could not upload proof. Please try again.');
+      Alert.alert('Upload Error', error.message || 'Could not upload proof. Please try again later.');
     } finally {
       setIsSaving(false);
     }

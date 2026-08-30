@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 
 // In production, configure EXPO_PUBLIC_API_URL via your hosting provider.
 // Locally, it uses your actual machine's local IP address so your phone can reach the backend over WiFi.
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.207:5000/api";
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.78:5000/api";
 
 const getAuthToken = async () => {
   return await AsyncStorage.getItem('authToken');
