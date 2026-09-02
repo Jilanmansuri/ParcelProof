@@ -16,13 +16,11 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
+
     try {
       const data = await loginUser(email.trim(), password);
-      // Save token and name to AsyncStorage
       await AsyncStorage.setItem('authToken', data.token);
       await AsyncStorage.setItem('userName', data.name);
-      
-      // Navigate to Home
       router.replace('/');
     } catch (error) {
       Alert.alert('Login Failed', error.message || 'Invalid email or password');
@@ -34,10 +32,10 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Login</Text>
-      
+
       <View style={styles.form}>
         <Text style={styles.label}>Email</Text>
-        <TextInput 
+        <TextInput
           style={styles.input}
           value={email}
           onChangeText={setEmail}
@@ -47,7 +45,7 @@ export default function LoginScreen() {
         />
 
         <Text style={styles.label}>Password</Text>
-        <TextInput 
+        <TextInput
           style={styles.input}
           value={password}
           onChangeText={setPassword}
@@ -55,8 +53,8 @@ export default function LoginScreen() {
           secureTextEntry
         />
 
-        <Pressable 
-          style={[styles.button, loading && styles.buttonDisabled]} 
+        <Pressable
+          style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleLogin}
           disabled={loading}
         >
@@ -141,5 +139,5 @@ const styles = StyleSheet.create({
     color: '#4A90E2',
     fontSize: 14,
     fontWeight: 'bold',
-  }
+  },
 });

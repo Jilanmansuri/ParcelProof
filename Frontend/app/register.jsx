@@ -17,16 +17,14 @@ export default function RegisterScreen() {
     }
 
     setLoading(true);
+
     try {
       const data = await registerUser(name, email, password);
-      // Save token and name to AsyncStorage
       await AsyncStorage.setItem('authToken', data.token);
       await AsyncStorage.setItem('userName', data.name);
-      
-      // Navigate to Home
       router.replace('/');
     } catch (error) {
-      Alert.alert('Registration Failed', 'User already exists or server error');
+      Alert.alert('Registration Failed', error.message || 'Could not register. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -35,10 +33,10 @@ export default function RegisterScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Register</Text>
-      
+
       <View style={styles.form}>
         <Text style={styles.label}>Name</Text>
-        <TextInput 
+        <TextInput
           style={styles.input}
           value={name}
           onChangeText={setName}
@@ -46,7 +44,7 @@ export default function RegisterScreen() {
         />
 
         <Text style={styles.label}>Email</Text>
-        <TextInput 
+        <TextInput
           style={styles.input}
           value={email}
           onChangeText={setEmail}
@@ -56,7 +54,7 @@ export default function RegisterScreen() {
         />
 
         <Text style={styles.label}>Password</Text>
-        <TextInput 
+        <TextInput
           style={styles.input}
           value={password}
           onChangeText={setPassword}
@@ -64,8 +62,8 @@ export default function RegisterScreen() {
           secureTextEntry
         />
 
-        <Pressable 
-          style={[styles.button, loading && styles.buttonDisabled]} 
+        <Pressable
+          style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleRegister}
           disabled={loading}
         >
@@ -150,5 +148,5 @@ const styles = StyleSheet.create({
     color: '#4A90E2',
     fontSize: 14,
     fontWeight: 'bold',
-  }
+  },
 });
