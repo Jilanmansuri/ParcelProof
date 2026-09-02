@@ -9,7 +9,7 @@ const proofSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    // Not required until auth is fully integrated
+    required: true,
   },
   orderId: {
     type: String,
@@ -28,6 +28,10 @@ const proofSchema = new mongoose.Schema({
   photo: {
     type: String,
   },
+  photos: {
+    type: [String],
+    default: [],
+  },
   latitude: {
     type: String,
   },
@@ -39,8 +43,12 @@ const proofSchema = new mongoose.Schema({
   },
   status: {
     type: String,
+    enum: ['Submitted', 'In Progress', 'Resolved', 'Closed'],
     default: 'Submitted',
-  }
+  },
+  capturedAt: {
+    type: Date,
+  },
 }, {
   timestamps: true,
 });

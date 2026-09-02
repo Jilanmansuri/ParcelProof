@@ -7,20 +7,13 @@ export default function CreateProofScreen() {
   const [courier, setCourier] = useState('');
   const [condition, setCondition] = useState('');
   const [description, setDescription] = useState('');
-
-  // Validation state
   const [errors, setErrors] = useState({});
 
-  const conditions = [
-    'Good',
-    'Damaged',
-    'Wrong Product',
-    'Missing Item',
-    'Tampered'
-  ];
+  const conditions = ['Good', 'Damaged', 'Wrong Product', 'Missing Item', 'Tampered'];
+  const problemConditions = ['Damaged', 'Wrong Product', 'Missing Item', 'Tampered'];
 
   const handleContinue = () => {
-    let newErrors = {};
+    const newErrors = {};
 
     if (!orderId.trim()) {
       newErrors.orderId = 'Order ID is required';
@@ -34,9 +27,7 @@ export default function CreateProofScreen() {
       newErrors.condition = 'Please select parcel condition';
     }
 
-    // Require description for bad conditions
-    const requiresDescription = ['Damaged', 'Wrong Product', 'Missing Item', 'Tampered'].includes(condition);
-    if (requiresDescription && !description.trim()) {
+    if (problemConditions.includes(condition) && !description.trim()) {
       newErrors.description = 'Please describe the problem';
     }
 
@@ -45,25 +36,28 @@ export default function CreateProofScreen() {
       return;
     }
 
-    // Clear errors if successful
     setErrors({});
 
-    // Navigate to camera screen with params
     router.push({
       pathname: '/camera',
-      params: {
-        orderId,
-        courier,
-        condition,
-        description,
-      }
+      params: { orderId, courier, condition, description },
     });
   };
+
+  const clearError = field => {
+    if (errors[field]) {
+      setErrors({ ...errors, [field]: null });
+    }
+  };
+
+  const descriptionRequired = problemConditions.includes(condition);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Create Proof</Text>
-      <Text style={styles.subtitle}>Enter the details of your parcel to start documenting evidence.</Text>
+      <Text style={styles.subtitle}>
+        Enter the details of your parcel to start documenting evidence.
+      </Text>
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Order ID *</Text>
@@ -71,9 +65,9 @@ export default function CreateProofScreen() {
           style={[styles.input, errors.orderId && styles.inputError]}
           placeholder="e.g. ORD-12345"
           value={orderId}
-          onChangeText={(text) => {
+          onChangeText={text => {
             setOrderId(text);
-            if (errors.orderId) setErrors({...errors, orderId: null});
+            clearError('orderId');
           }}
         />
         {errors.orderId && <Text style={styles.errorText}>{errors.orderId}</Text>}
@@ -85,9 +79,9 @@ export default function CreateProofScreen() {
           style={[styles.input, errors.courier && styles.inputError]}
           placeholder="e.g. FedEx, UPS"
           value={courier}
-          onChangeText={(text) => {
+          onChangeText={text => {
             setCourier(text);
-            if (errors.courier) setErrors({...errors, courier: null});
+            clearError('courier');
           }}
         />
         {errors.courier && <Text style={styles.errorText}>{errors.courier}</Text>}
@@ -95,49 +89,55 @@ export default function CreateProofScreen() {
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Parcel Condition *</Text>
+
         <View style={styles.conditionContainer}>
-          {conditions.map((item) => (
+          {conditions.map(item => (
             <Pressable
               key={item}
               style={[
                 styles.conditionBadge,
                 condition === item && styles.conditionBadgeSelected,
-                errors.condition && styles.inputError
+                errors.condition && styles.inputError,
               ]}
               onPress={() => {
                 setCondition(item);
-                if (errors.condition) setErrors({...errors, condition: null});
+                clearError('condition');
               }}
             >
-              <Text 
-                style={[
-                  styles.conditionText,
-                  condition === item && styles.conditionTextSelected
-                ]}
-              >
+              <Text style={[styles.conditionText, condition === item && styles.conditionTextSelected]}>
                 {item}
               </Text>
             </Pressable>
           ))}
         </View>
+
         {errors.condition && <Text style={styles.errorText}>{errors.condition}</Text>}
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Description {['Damaged', 'Wrong Product', 'Missing Item', 'Tampered'].includes(condition) ? '*' : '(Optional)'}</Text>
+        <Text style={styles.label}>
+          Description {descriptionRequired ? '*' : '(Optional)'}
+        </Text>
+
         <TextInput
           style={[styles.input, styles.textArea, errors.description && styles.inputError]}
           placeholder="Describe the issue in detail..."
           value={description}
-          onChangeText={(text) => {
+          onChangeText={text => {
             setDescription(text);
-            if (errors.description) setErrors({...errors, description: null});
+            clearError('description');
           }}
-          multiline={true}
+          multiline
           numberOfLines={4}
           textAlignVertical="top"
+          maxLength={500}
         />
-        {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
+
+        <Text style={styles.charCounter}>{description.length}/500</Text>
+
+        {errors.description && (
+          <Text style={styles.errorText}>{errors.description}</Text>
+        )}
       </View>
 
       <Pressable style={styles.button} onPress={handleContinue}>
@@ -192,6 +192,12 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#ff4d4d',
     fontSize: 14,
+    marginTop: 4,
+  },
+  charCounter: {
+    fontSize: 12,
+    color: '#aaa',
+    textAlign: 'right',
     marginTop: 4,
   },
   textArea: {

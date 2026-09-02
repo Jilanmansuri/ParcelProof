@@ -8,8 +8,7 @@ export default function ProofsScreen() {
   const [allProofs, setAllProofs] = useState([]);
   const [filteredProofs, setFilteredProofs] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  // Search and filter state
+  const [apiError, setApiError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
 
@@ -19,17 +18,19 @@ export default function ProofsScreen() {
     loadProofs();
   }, []);
 
-  // Run filtering logic whenever searchQuery, activeFilter, or allProofs changes
   useEffect(() => {
     applyFilters();
   }, [searchQuery, activeFilter, allProofs]);
 
   const loadProofs = async () => {
+    setLoading(true);
+    setApiError('');
+
     try {
       const data = await getProofs();
       setAllProofs(data);
     } catch (error) {
-      console.error('Failed to load proofs from backend:', error);
+      setApiError(error.message || 'Failed to load proofs. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -38,17 +39,17 @@ export default function ProofsScreen() {
   const applyFilters = () => {
     let result = allProofs;
 
-    // Filter by Status
     if (activeFilter !== 'All') {
       result = result.filter(proof => proof.status === activeFilter);
     }
 
-    // Filter by Search Query (Order ID or Report ID)
     if (searchQuery.trim() !== '') {
       const query = searchQuery.toLowerCase();
-      result = result.filter(proof => 
-        (proof.orderId && proof.orderId.toLowerCase().includes(query)) ||
-        (proof.reportId && proof.reportId.toLowerCase().includes(query))
+
+      result = result.filter(
+        proof =>
+          (proof.orderId && proof.orderId.toLowerCase().includes(query)) ||
+          (proof.reportId && proof.reportId.toLowerCase().includes(query))
       );
     }
 
@@ -56,17 +57,20 @@ export default function ProofsScreen() {
   };
 
   const renderItem = ({ item }) => (
-    <Pressable 
+    <Pressable
       style={styles.card}
-      onPress={() => router.push({
-        pathname: '/proof-details',
-        params: { reportId: item.reportId }
-      })}
+      onPress={() =>
+        router.push({
+          pathname: '/proof-details',
+          params: { reportId: item.reportId },
+        })
+      }
     >
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>{item.orderId}</Text>
         <StatusBadge status={item.status} />
       </View>
+
       <Text style={styles.cardText}>Report ID: {item.reportId}</Text>
       <Text style={styles.cardText}>Condition: {item.condition}</Text>
       <Text style={styles.cardText}>Courier: {item.courier || 'N/A'}</Text>
@@ -84,12 +88,23 @@ export default function ProofsScreen() {
     );
   }
 
+  if (apiError) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorIcon}>⚠️</Text>
+        <Text style={styles.errorText}>{apiError}</Text>
+
+        <Pressable style={styles.retryButton} onPress={loadProofs}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      
-      {/* SEARCH BAR */}
       <View style={styles.searchContainer}>
-        <TextInput 
+        <TextInput
           style={styles.searchInput}
           placeholder="Search by Order ID or Report ID..."
           value={searchQuery}
@@ -97,25 +112,20 @@ export default function ProofsScreen() {
         />
       </View>
 
-      {/* STATUS FILTERS */}
       <View style={styles.filtersContainer}>
-        <FlatList 
+        <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
           data={filters}
-          keyExtractor={(item) => item}
+          keyExtractor={item => item}
           renderItem={({ item }) => (
-            <Pressable 
-              style={[
-                styles.filterChip, 
-                activeFilter === item && styles.filterChipActive
-              ]}
+            <Pressable
+              style={[styles.filterChip, activeFilter === item && styles.filterChipActive]}
               onPress={() => setActiveFilter(item)}
             >
-              <Text style={[
-                styles.filterText,
-                activeFilter === item && styles.filterTextActive
-              ]}>
+              <Text
+                style={[styles.filterText, activeFilter === item && styles.filterTextActive]}
+              >
                 {item}
               </Text>
             </Pressable>
@@ -123,17 +133,18 @@ export default function ProofsScreen() {
         />
       </View>
 
-      {/* LIST OF PROOFS */}
       {filteredProofs.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>
-            {allProofs.length === 0 ? "You haven't added any proofs yet." : "No matching proofs found."}
+            {allProofs.length === 0
+              ? "You haven't added any proofs yet."
+              : 'No matching proofs found.'}
           </Text>
         </View>
       ) : (
         <FlatList
           data={filteredProofs}
-          keyExtractor={(item) => item._id || item.reportId}
+          keyExtractor={item => item._id || item.reportId}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
         />
@@ -193,11 +204,39 @@ const styles = StyleSheet.create({
   filterTextActive: {
     color: '#fff',
   },
-  listContent: { padding: 15, paddingBottom: 40 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 15, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 2, borderLeftWidth: 4, borderLeftColor: '#4A90E2' },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#333' },
-  cardText: { fontSize: 14, color: '#555', marginBottom: 6 },
+  listContent: {
+    padding: 15,
+    paddingBottom: 40,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4A90E2',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  cardText: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 6,
+  },
   cardDate: {
     fontSize: 12,
     color: '#aaa',
@@ -214,5 +253,27 @@ const styles = StyleSheet.create({
     color: '#888',
     textAlign: 'center',
     fontStyle: 'italic',
-  }
+  },
+  errorIcon: {
+    fontSize: 40,
+    marginBottom: 12,
+  },
+  errorText: {
+    fontSize: 15,
+    color: '#e74c3c',
+    textAlign: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 20,
+  },
+  retryButton: {
+    backgroundColor: '#4A90E2',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 10,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
