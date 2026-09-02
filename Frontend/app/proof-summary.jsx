@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Image, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Image, Alert, ActivityIndicator, FlatList } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import * as Clipboard from 'expo-clipboard';
 import { scheduleProofSubmittedNotification } from '../services/notifications';
 import { createProof } from '../services/api';
 
@@ -9,36 +8,40 @@ export default function ProofSummaryScreen() {
   const params = useLocalSearchParams();
   const [isSaving, setIsSaving] = useState(false);
 
-  const { orderId, courier, condition, description, photoUri, latitude, longitude, address } = params;
+  const { orderId, courier, condition, description, photoUris, latitude, longitude, address } = params;
+
+  const photos = (() => {
+    try {
+      const parsed = JSON.parse(photoUris || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  })();
 
   const handleSubmit = async () => {
     setIsSaving(true);
-    
+
     try {
-      // Send data (including photo) to MongoDB via our Backend API
       const response = await createProof({
         orderId,
         courier,
         condition,
         description,
-        photo: photoUri, 
+        photos,
         latitude,
         longitude,
-        address
+        address,
       });
 
-      // Trigger local notification with the new DB-generated reportId
       await scheduleProofSubmittedNotification(response.reportId);
 
       Alert.alert(
-        'Success', 
-        `Proof submitted successfully!\nReport ID: ${response.reportId}`,
-        [
-          { text: 'View My Proofs', onPress: () => router.push('/proofs') }
-        ]
+        '✅ Success',
+        `Proof submitted!\nReport ID: ${response.reportId}`,
+        [{ text: 'View My Proofs', onPress: () => router.push('/proofs') }]
       );
     } catch (error) {
-      // Fallback: If backend fails, show error but don't lose data
       Alert.alert('Upload Error', error.message || 'Could not upload proof. Please try again later.');
     } finally {
       setIsSaving(false);
@@ -48,30 +51,78 @@ export default function ProofSummaryScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Review Proof</Text>
-      
+      <Text style={styles.subtitle}>Check everything before submitting.</Text>
+
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Parcel Details</Text>
-        <Text style={styles.text}>Order ID: {orderId}</Text>
-        {courier && <Text style={styles.text}>Courier: {courier}</Text>}
-        <Text style={styles.text}>Condition: {condition}</Text>
-        {description && <Text style={styles.text}>Description: {description}</Text>}
+        <Text style={styles.sectionTitle}>📦 Parcel Details</Text>
+
+        <View style={styles.row}>
+          <Text style={styles.label}>Order ID</Text>
+          <Text style={styles.value}>{orderId}</Text>
+        </View>
+
+        {courier ? (
+          <View style={styles.row}>
+            <Text style={styles.label}>Courier</Text>
+            <Text style={styles.value}>{courier}</Text>
+          </View>
+        ) : null}
+
+        <View style={styles.row}>
+          <Text style={styles.label}>Condition</Text>
+          <Text style={[styles.value, styles.conditionValue]}>{condition}</Text>
+        </View>
+
+        {description ? (
+          <View style={styles.row}>
+            <Text style={styles.label}>Description</Text>
+            <Text style={styles.value}>{description}</Text>
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Location Details</Text>
-        <Text style={styles.text}>Address: {address || 'Not provided'}</Text>
-        <Text style={styles.text}>
-          Coordinates: {latitude && longitude ? `${latitude}, ${longitude}` : 'Not provided'}
-        </Text>
+        <Text style={styles.sectionTitle}>📍 Location Details</Text>
+
+        <View style={styles.row}>
+          <Text style={styles.label}>Address</Text>
+          <Text style={styles.value}>{address || 'Not provided'}</Text>
+        </View>
+
+        <View style={styles.row}>
+          <Text style={styles.label}>Coordinates</Text>
+          <Text style={styles.value}>
+            {latitude && longitude ? `${latitude}, ${longitude}` : 'Not provided'}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Evidence Photo</Text>
-        {photoUri ? (
-          <Image source={{ uri: photoUri }} style={styles.evidenceImage} />
+        <Text style={styles.sectionTitle}>📸 Evidence Photos ({photos.length})</Text>
+
+        {photos.length > 0 ? (
+          <FlatList
+            data={photos}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(_, index) => index.toString()}
+            style={styles.photoList}
+            contentContainerStyle={styles.photoContent}
+            renderItem={({ item, index }) => (
+              <View style={styles.photoWrapper}>
+                <Image source={{ uri: item }} style={styles.evidencePhoto} />
+
+                {index === 0 && (
+                  <View style={styles.mainBadge}>
+                    <Text style={styles.mainBadgeText}>MAIN</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          />
         ) : (
           <View style={styles.placeholderImage}>
-            <Text style={styles.placeholderText}>📸 No photo uploaded</Text>
+            <Text style={styles.placeholderText}>📸 No photos taken</Text>
           </View>
         )}
       </View>
@@ -79,7 +130,9 @@ export default function ProofSummaryScreen() {
       {isSaving ? (
         <View style={styles.savingContainer}>
           <ActivityIndicator size="large" color="#4A90E2" />
-          <Text style={styles.savingText}>Uploading Proof...</Text>
+          <Text style={styles.savingText}>
+            Uploading {photos.length} photo{photos.length > 1 ? 's' : ''}...
+          </Text>
         </View>
       ) : (
         <Pressable style={styles.submitButton} onPress={handleSubmit}>
@@ -87,12 +140,12 @@ export default function ProofSummaryScreen() {
         </Pressable>
       )}
 
-      <Pressable 
-        style={styles.backButton} 
+      <Pressable
+        style={styles.backButton}
         onPress={() => router.back()}
         disabled={isSaving}
       >
-        <Text style={styles.backButtonText}>Edit Details</Text>
+        <Text style={styles.backButtonText}>← Edit Details</Text>
       </Pressable>
     </ScrollView>
   );
@@ -111,42 +164,85 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#888',
     marginBottom: 20,
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 16,
-    marginBottom: 20,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#4A90E2',
-    marginBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    marginBottom: 12,
     paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  text: {
-    fontSize: 16,
-    color: '#555',
-    marginBottom: 8,
+  row: {
+    marginBottom: 10,
   },
-  evidenceImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 8,
+  label: {
+    fontSize: 12,
+    color: '#aaa',
+    fontWeight: '600',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  value: {
+    fontSize: 15,
+    color: '#333',
+    fontWeight: '500',
+  },
+  conditionValue: {
+    color: '#e67e22',
+    fontWeight: 'bold',
+  },
+  photoList: {
+    marginTop: 4,
+  },
+  photoContent: {
+    gap: 10,
+    paddingBottom: 4,
+  },
+  photoWrapper: {
+    position: 'relative',
+  },
+  evidencePhoto: {
+    width: 120,
+    height: 120,
+    borderRadius: 10,
     backgroundColor: '#eee',
   },
+  mainBadge: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    backgroundColor: '#4A90E2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  mainBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
   placeholderImage: {
-    width: '100%',
-    height: 150,
+    height: 100,
     borderRadius: 8,
     backgroundColor: '#f9f9f9',
     borderWidth: 1,
@@ -162,19 +258,24 @@ const styles = StyleSheet.create({
   savingContainer: {
     alignItems: 'center',
     marginVertical: 20,
+    gap: 10,
   },
   savingText: {
-    marginTop: 10,
-    fontSize: 16,
+    fontSize: 15,
     color: '#4A90E2',
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   submitButton: {
     backgroundColor: '#4A90E2',
     paddingVertical: 16,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 12,
+    shadowColor: '#4A90E2',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   submitButtonText: {
     color: '#fff',
@@ -182,16 +283,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   backButton: {
-    backgroundColor: 'transparent',
-    paddingVertical: 16,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#999',
+    borderColor: '#ccc',
   },
   backButtonText: {
     color: '#666',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
