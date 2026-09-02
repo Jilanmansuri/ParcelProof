@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, ScrollView, Alert } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, ScrollView } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { getProofs } from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 
@@ -9,34 +10,37 @@ export default function HomeDashboard() {
   const [userName, setUserName] = useState('');
   const [proofs, setProofs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState('');
 
-  // useFocusEffect runs every time the screen comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      checkAuthAndLoadData();
-    }, [])
-  );
+  const loadDashboard = async () => {
+    setLoading(true);
+    setApiError('');
 
-  const checkAuthAndLoadData = async () => {
     try {
       const token = await AsyncStorage.getItem('authToken');
+
       if (!token) {
         router.replace('/login');
         return;
       }
-      
+
       const name = await AsyncStorage.getItem('userName');
       setUserName(name || 'User');
 
       const data = await getProofs();
       setProofs(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('Failed to load dashboard data:', error);
-      Alert.alert('Error', 'Could not load your dashboard data.');
+      setApiError(error.message || 'Could not load your dashboard data.');
     } finally {
       setLoading(false);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboard();
+    }, [])
+  );
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem('authToken');
@@ -53,13 +57,24 @@ export default function HomeDashboard() {
     );
   }
 
-  // Calculate stats
-  const totalProofs = proofs.length;
-  const submittedCount = proofs.filter(p => p.status === 'Submitted').length;
-  const inProgressCount = proofs.filter(p => p.status === 'In Progress').length;
-  const resolvedCount = proofs.filter(p => p.status === 'Resolved').length;
+  if (apiError) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorIcon}>⚠️</Text>
+        <Text style={styles.errorMsg}>{apiError}</Text>
 
-  const recentProofs = proofs.slice(0, 3); // Get latest 3
+        <Pressable style={styles.retryButton} onPress={loadDashboard}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  const totalProofs = proofs.length;
+  const submittedCount = proofs.filter(proof => proof.status === 'Submitted').length;
+  const inProgressCount = proofs.filter(proof => proof.status === 'In Progress').length;
+  const resolvedCount = proofs.filter(proof => proof.status === 'Resolved').length;
+  const recentProofs = proofs.slice(0, 3);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -73,14 +88,17 @@ export default function HomeDashboard() {
           <Text style={styles.statNumber}>{totalProofs}</Text>
           <Text style={styles.statLabel}>Total Proofs</Text>
         </View>
+
         <View style={styles.statBox}>
           <Text style={styles.statNumber}>{submittedCount}</Text>
           <Text style={styles.statLabel}>Submitted</Text>
         </View>
+
         <View style={styles.statBox}>
           <Text style={styles.statNumber}>{inProgressCount}</Text>
           <Text style={styles.statLabel}>In Progress</Text>
         </View>
+
         <View style={styles.statBox}>
           <Text style={styles.statNumber}>{resolvedCount}</Text>
           <Text style={styles.statLabel}>Resolved</Text>
@@ -88,41 +106,37 @@ export default function HomeDashboard() {
       </View>
 
       <View style={styles.buttonContainer}>
-        <Pressable 
-          style={styles.primaryButton}
-          onPress={() => router.push('/create-proof')}
-        >
+        <Pressable style={styles.primaryButton} onPress={() => router.push('/create-proof')}>
           <Text style={styles.primaryButtonText}>+ Create Parcel Proof</Text>
         </Pressable>
 
-        <Pressable 
-          style={styles.secondaryButton}
-          onPress={() => router.push('/proofs')}
-        >
+        <Pressable style={styles.secondaryButton} onPress={() => router.push('/proofs')}>
           <Text style={styles.secondaryButtonText}>My Proofs</Text>
         </Pressable>
       </View>
 
-      {/* RECENT PROOFS */}
       <View style={styles.recentSection}>
         <Text style={styles.sectionTitle}>Recent Proofs</Text>
-        
+
         {recentProofs.length === 0 ? (
           <Text style={styles.emptyText}>You haven't created any proofs yet.</Text>
         ) : (
-          recentProofs.map((proof) => (
-            <Pressable 
-              key={proof._id} 
+          recentProofs.map(proof => (
+            <Pressable
+              key={proof._id}
               style={styles.recentCard}
-              onPress={() => router.push({
-                pathname: '/proof-details',
-                params: { reportId: proof.reportId }
-              })}
+              onPress={() =>
+                router.push({
+                  pathname: '/proof-details',
+                  params: { reportId: proof.reportId },
+                })
+              }
             >
               <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle}>{proof.orderId}</Text>
                 <StatusBadge status={proof.status} />
               </View>
+
               <Text style={styles.cardText}>Report ID: {proof.reportId}</Text>
               <Text style={styles.cardText}>Condition: {proof.condition}</Text>
               <Text style={styles.cardDate}>
@@ -133,10 +147,7 @@ export default function HomeDashboard() {
         )}
       </View>
 
-      <Pressable 
-        style={styles.logoutButton}
-        onPress={handleLogout}
-      >
+      <Pressable style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>Logout</Text>
       </Pressable>
     </ScrollView>
@@ -266,9 +277,22 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#4A90E2',
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-  cardText: { fontSize: 14, color: '#555', marginBottom: 4 },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  cardText: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 4,
+  },
   cardDate: {
     fontSize: 12,
     color: '#aaa',
@@ -281,6 +305,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoutButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  errorIcon: {
+    fontSize: 40,
+    marginBottom: 12,
+  },
+  errorMsg: {
+    fontSize: 15,
+    color: '#e74c3c',
+    textAlign: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 20,
+  },
+  retryButton: {
+    backgroundColor: '#4A90E2',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 10,
+  },
+  retryButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',

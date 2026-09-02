@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -13,8 +13,9 @@ export default function LocationScreen() {
   const getLocation = async () => {
     setLoading(true);
     setErrorMsg(null);
-    
-    let { status } = await Location.requestForegroundPermissionsAsync();
+
+    const { status } = await Location.requestForegroundPermissionsAsync();
+
     if (status !== 'granted') {
       setErrorMsg('Permission to access location was denied');
       setLoading(false);
@@ -22,12 +23,12 @@ export default function LocationScreen() {
     }
 
     try {
-      let currentLocation = await Location.getCurrentPositionAsync({});
+      const currentLocation = await Location.getCurrentPositionAsync({});
       setLocation(currentLocation.coords);
 
-      let reverseGeocode = await Location.reverseGeocodeAsync({
+      const reverseGeocode = await Location.reverseGeocodeAsync({
         latitude: currentLocation.coords.latitude,
-        longitude: currentLocation.coords.longitude
+        longitude: currentLocation.coords.longitude,
       });
 
       if (reverseGeocode.length > 0) {
@@ -55,8 +56,9 @@ export default function LocationScreen() {
         ...params,
         latitude: location?.latitude?.toString() || '',
         longitude: location?.longitude?.toString() || '',
-        address: address
-      }
+        address,
+        photoUris: params.photoUris || '[]',
+      },
     });
   };
 
@@ -72,11 +74,18 @@ export default function LocationScreen() {
   if (errorMsg) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>{errorMsg}</Text>
-        <Text style={styles.subtitle}>We need your location to verify where the parcel was delivered.</Text>
+        <Text style={styles.errorIcon}>📍</Text>
+        <Text style={styles.errorTitle}>Location Not Available</Text>
+        <Text style={styles.errorText}>
+          {errorMsg.includes('denied')
+            ? "Location permission was denied. Your proof will be created without GPS information — that's okay."
+            : 'Could not get your current location. You can still submit your proof without GPS data.'}
+        </Text>
+
         <Pressable style={styles.button} onPress={getLocation}>
           <Text style={styles.buttonText}>Allow Location & Try Again</Text>
         </Pressable>
+
         <Pressable style={[styles.button, styles.skipButton]} onPress={handleContinue}>
           <Text style={styles.skipButtonText}>Continue Without Location</Text>
         </Pressable>
@@ -94,10 +103,12 @@ export default function LocationScreen() {
           <Text style={styles.label}>Latitude:</Text>
           <Text style={styles.value}>{location?.latitude}</Text>
         </View>
+
         <View style={styles.row}>
           <Text style={styles.label}>Longitude:</Text>
           <Text style={styles.value}>{location?.longitude}</Text>
         </View>
+
         <View style={styles.row}>
           <Text style={styles.label}>Address:</Text>
           <Text style={styles.value}>{address}</Text>
@@ -167,12 +178,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  errorText: {
-    fontSize: 18,
+  errorIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  errorTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#e74c3c',
-    marginBottom: 10,
+    color: '#333',
+    marginBottom: 8,
     textAlign: 'center',
+  },
+  errorText: {
+    fontSize: 15,
+    textAlign: 'center',
+    color: '#666',
+    lineHeight: 22,
+    marginBottom: 20,
+    paddingHorizontal: 10,
   },
   button: {
     backgroundColor: '#4A90E2',
