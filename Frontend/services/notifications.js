@@ -1,7 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-// Configure how notifications behave when the app is in the foreground
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -13,12 +12,12 @@ Notifications.setNotificationHandler({
 export async function requestNotificationPermission() {
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
-  
+
   if (existingStatus !== 'granted') {
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
   }
-  
+
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
       name: 'default',
@@ -27,23 +26,20 @@ export async function requestNotificationPermission() {
       lightColor: '#FF231F7C',
     });
   }
-  
+
   return finalStatus === 'granted';
 }
 
 export async function scheduleProofSubmittedNotification(reportId) {
   const hasPermission = await requestNotificationPermission();
-  
-  if (!hasPermission) {
-    console.log('Notification permission denied, skipping notification.');
-    return;
-  }
-  
+
+  if (!hasPermission) return;
+
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: "ParcelProof",
+      title: 'ParcelProof',
       body: `Your parcel proof ${reportId} has been submitted successfully.`,
     },
-    trigger: null, // trigger: null fires it immediately
+    trigger: null,
   });
 }
