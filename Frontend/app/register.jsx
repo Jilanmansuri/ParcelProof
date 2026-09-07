@@ -22,6 +22,7 @@ export default function RegisterScreen() {
       const data = await registerUser(name, email, password);
       await AsyncStorage.setItem('authToken', data.token);
       await AsyncStorage.setItem('userName', data.name);
+      await AsyncStorage.setItem('userEmail', email.trim());
       router.replace('/');
     } catch (error) {
       Alert.alert('Registration Failed', error.message || 'Could not register. Please try again.');
