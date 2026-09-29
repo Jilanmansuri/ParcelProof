@@ -1,19 +1,10 @@
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  ScrollView,
-  Alert,
-  Switch,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Alert, Switch, ActivityIndicator} from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { getProofs } from '../../services/api';
-
+                      
 export default function ProfileScreen() {
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -23,7 +14,7 @@ export default function ProfileScreen() {
 
   const loadUserData = async () => {
     try {
-      const name = await AsyncStorage.getItem('userName');
+      const name  = await AsyncStorage.getItem('userName');
       const email = await AsyncStorage.getItem('userEmail');
       setUserName(name || 'User');
       setUserEmail(email || 'user@example.com');

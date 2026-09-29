@@ -9,8 +9,11 @@ export default function RootLayout() {
     if (Platform.OS === 'android') {
       const hideNavigationBar = async () => {
         try {
-          await NavigationBar.setVisibilityAsync('hidden');
-          await NavigationBar.setBehaviorAsync('overlay-swipe');
+          if (typeof NavigationBar?.setHidden === 'function') {
+            NavigationBar.setHidden(true);
+          } else if (typeof NavigationBar?.setVisibilityAsync === 'function') {
+            await NavigationBar.setVisibilityAsync('hidden');
+          }
         } catch (error) {
           console.warn('Could not set immersive navigation bar mode:', error);
         }
