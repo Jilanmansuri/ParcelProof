@@ -2,18 +2,14 @@ import { useEffect } from 'react';
 import { Platform, AppState } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import * as NavigationBar from 'expo-navigation-bar';
+import { NavigationBar } from 'expo-navigation-bar';
 
 export default function RootLayout() {
   useEffect(() => {
     if (Platform.OS === 'android') {
-      const hideNavigationBar = async () => {
+      const hideNavigationBar = () => {
         try {
-          if (typeof NavigationBar?.setHidden === 'function') {
-            NavigationBar.setHidden(true);
-          } else if (typeof NavigationBar?.setVisibilityAsync === 'function') {
-            await NavigationBar.setVisibilityAsync('hidden');
-          }
+          NavigationBar.setHidden(true);
         } catch (error) {
           console.warn('Could not set immersive navigation bar mode:', error);
         }
